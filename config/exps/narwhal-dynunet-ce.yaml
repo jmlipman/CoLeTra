@@ -1,0 +1,245 @@
+batch_size: 4
+batch_size_val: 1
+callbacks:
+- lib.callback._end_train_iteration_save_last_model_before_val
+- lib.callback._start_training_scheduler_init
+dataset:
+  name: lib.data.NarwhalNoUOMs
+  params:
+    id: pseudolabel_and_groundtruth
+device: cuda
+exp_name: NarwhalNoUOMs/DynUNet/ce
+exp_run: 1
+fold: 1
+full_conf: true
+iteration_start: 1
+iterations: 1000
+loss:
+  name: lib.losses.MyDiceCELoss
+  params:
+    lambda_ce: 1
+    lambda_dice: 0
+    weights:
+    - 0.05
+    - 0.95
+metrics_pred:
+- name: lib.metrics.DiceMetric
+- name: lib.metrics.BettiErrorMetric
+- name: lib.metrics.clDiceMetric
+- name: lib.metrics.HD95Metric
+  params:
+    voxres:
+    - 0.325
+    - 0.325
+    - 0.325
+metrics_val:
+- name: lib.metrics.DiceMetric
+model:
+  name: monai.networks.nets.DynUNet
+  params:
+    deep_supervision: true
+    deep_supr_num: 3
+    in_channels: 1
+    kernel_size:
+    - 3
+    - 3
+    - 3
+    - 3
+    - 3
+    - 3
+    out_channels: 2
+    spatial_dims: 3
+    strides:
+    - 1
+    - 2
+    - 2
+    - 2
+    - 2
+    - 2
+    upsample_kernel_size:
+    - 2
+    - 2
+    - 2
+    - 2
+    - 2
+move_config_file: true
+optimizer:
+  name: torch.optim.Adam
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-05
+random_seed: 42
+scheduler:
+  name: torch.optim.lr_scheduler.LambdaLR
+  params:
+    lr_lambda: 'lambda ep: (1 - ep/1000)**0.9'
+transform_measure:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.AsDiscreted
+  params:
+    keys:
+    - prediction
+    to_onehot: 2
+- name: monai.transforms.MapLabelValued
+  params:
+    keys:
+    - label
+    orig_labels:
+    - 255
+    target_labels:
+    - 1
+transform_post_pred:
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_post_val:
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_test:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+transform_train:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: lib.transforms.MyNormalizeIntensityd
+  params:
+    keys:
+    - image
+    - inpainted
+    ref: image
+- name: monai.transforms.RandZoomd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+    max_zoom: 1.75
+    min_zoom: 1
+    mode:
+    - trilinear
+    - nearest-exact
+    - trilinear
+    prob: 0.5
+- name: monai.transforms.RandCropByLabelClassesd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+    label_key: label
+    num_classes: 2
+    num_samples: 15
+    ratios:
+    - 0
+    - 1
+    spatial_size:
+    - 128
+    - 128
+    - 128
+- name: lib.transforms.CoLeTraTransformd
+  params:
+    fill_type:
+    - -2
+    - -2
+    holes: 2
+    key_images:
+    - image
+    key_label: label
+    key_label_class: 1
+    prob: 1
+    size:
+    - 11
+    - 11
+    - 11
+- name: monai.transforms.RandGaussianNoised
+  params:
+    keys:
+    - image
+    mean: 0
+    prob: 0.5
+    std: 1
+- name: monai.transforms.RandAdjustContrastd
+  params:
+    gamma:
+    - 0.8
+    - 1.2
+    keys:
+    - image
+    prob: 0.5
+- name: monai.transforms.RandAxisFlipd
+  params:
+    keys:
+    - image
+    - label
+    prob: 0.5
+transform_val:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+- name: monai.transforms.MapLabelValued
+  params:
+    keys:
+    - label
+    orig_labels:
+    - 255
+    target_labels:
+    - 1
+val_inferer:
+  name: monai.inferers.SlidingWindowInferer
+  params:
+    overlap: 0.25
+    roi_size:
+    - 128
+    - 128
+    - 128
+    sw_batch_size: 4
+val_interval: 500

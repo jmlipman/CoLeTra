@@ -1,0 +1,244 @@
+batch_size: 4
+batch_size_val: 4
+callbacks:
+- lib.callback._end_train_iteration_save_last_model
+- lib.callback._start_training_scheduler_init
+dataset:
+  name: lib.data.DRIVE
+  params:
+    id: gt
+device: cuda
+exp_name: DRIVE/AttentionUNet/clDice
+exp_run: 1
+fold: 3
+full_conf: true
+iteration_start: 1
+iterations: 5000
+loss:
+  name: lib.loss_cldice.soft_dice_cldice
+  params:
+    alpha: 0.2
+    iter_: 3
+    smooth: 1
+metrics_pred:
+- name: lib.metrics.DiceMetric
+- name: lib.metrics.BettiErrorMetric
+- name: lib.metrics.clDiceMetric
+- name: lib.metrics.HD95Metric
+  params:
+    voxres:
+    - 1
+    - 1
+metrics_val:
+- name: lib.metrics.DiceMetric
+model:
+  name: monai.networks.nets.AttentionUnet
+  params:
+    channels:
+    - 32
+    - 64
+    - 128
+    - 256
+    - 512
+    - 512
+    in_channels: 3
+    out_channels: 2
+    spatial_dims: 2
+    strides:
+    - 1
+    - 2
+    - 2
+    - 2
+    - 2
+    - 2
+move_config_file: true
+optimizer:
+  name: torch.optim.Adam
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-05
+random_seed: 43
+scheduler:
+  name: torch.optim.lr_scheduler.LambdaLR
+  params:
+    lr_lambda: 'lambda ep: (1 - ep/5000)**0.9'
+transform_measure:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.MapLabelValued
+  params:
+    keys:
+    - label
+    - prediction
+    orig_labels:
+    - 255
+    target_labels:
+    - 1
+- name: monai.transforms.AsDiscreted
+  params:
+    keys:
+    - prediction
+    to_onehot: 2
+transform_post_pred:
+- name: monai.transforms.CenterSpatialCrop
+  params:
+    roi_size:
+    - 565
+    - 584
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_post_val:
+- name: monai.transforms.CenterSpatialCrop
+  params:
+    roi_size:
+    - 565
+    - 584
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_test:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+- name: monai.transforms.DivisiblePadd
+  params:
+    k: 32
+    keys:
+    - image
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+transform_train:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: monai.transforms.MapLabelValued
+  params:
+    keys:
+    - label
+    orig_labels:
+    - 255
+    target_labels:
+    - 1
+- name: monai.transforms.DivisiblePadd
+  params:
+    k: 32
+    keys:
+    - image
+    - label
+    - inpainted
+- name: lib.transforms.MyNormalizeIntensityd
+  params:
+    keys:
+    - image
+    - inpainted
+    ref: image
+- name: lib.transforms.CoLeTraTransformd
+  params:
+    fill_type:
+    - -2
+    - -2
+    holes: 39
+    key_images:
+    - image
+    key_label: label
+    key_label_class: 1
+    prob: 1
+    size:
+    - 19
+    - 19
+- name: monai.transforms.RandZoomd
+  params:
+    keys:
+    - image
+    - label
+    max_zoom: 1.75
+    min_zoom: 1
+    mode:
+    - trilinear
+    - nearest-exact
+    prob: 0.5
+- name: monai.transforms.RandGaussianNoised
+  params:
+    keys:
+    - image
+    mean: 0
+    prob: 0.5
+    std: 1
+- name: monai.transforms.RandAdjustContrastd
+  params:
+    gamma:
+    - 0.8
+    - 1.2
+    keys:
+    - image
+    prob: 0.5
+- name: monai.transforms.RandAxisFlipd
+  params:
+    keys:
+    - image
+    - label
+    prob: 0.5
+transform_val:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.DivisiblePadd
+  params:
+    k: 32
+    keys:
+    - image
+- name: monai.transforms.MapLabelValued
+  params:
+    keys:
+    - label
+    orig_labels:
+    - 255
+    target_labels:
+    - 1
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+val_inferer:
+  name: monai.inferers.SimpleInferer
+val_interval: 500

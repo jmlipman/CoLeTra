@@ -1,0 +1,253 @@
+batch_size: 4
+batch_size_val: 4
+callbacks:
+- lib.callback._end_train_iteration_save_last_model_before_val
+- lib.callback._start_training_scheduler_init
+dataset:
+  name: lib.data.CREMI
+  params:
+    id: thr4
+device: cuda
+exp_name: CREMI/AttentionUNet/topoloss
+exp_run: 1
+fold: 1
+full_conf: true
+iteration_start: 1
+iterations: 4000
+loss:
+  name: lib.loss_toponet.TopoNetLoss
+  params:
+    activate_at_iteration: 2800
+    lambd: 0.0001
+    topo_size: 50
+metrics_pred:
+- name: lib.metrics.DiceMetric
+- name: lib.metrics.BettiErrorMetric
+- name: lib.metrics.clDiceMetric
+- name: lib.metrics.HD95Metric
+  params:
+    voxres:
+    - 0.04
+    - 0.004
+    - 0.004
+metrics_val:
+- name: lib.metrics.DiceMetric
+model:
+  name: monai.networks.nets.AttentionUnet
+  params:
+    channels:
+    - 16
+    - 32
+    - 64
+    - 128
+    in_channels: 1
+    out_channels: 2
+    spatial_dims: 2
+    strides:
+    - 1
+    - 2
+    - 2
+    - 2
+    - 2
+    - 2
+move_config_file: true
+optimizer:
+  name: torch.optim.Adam
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-05
+random_seed: 42
+scheduler:
+  name: torch.optim.lr_scheduler.LambdaLR
+  params:
+    lr_lambda: 'lambda ep: (1 - ep/4000)**0.9'
+transform_measure:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - label
+    - prediction
+- name: monai.transforms.AsDiscreted
+  params:
+    keys:
+    - prediction
+    to_onehot: 2
+transform_post_pred:
+- name: monai.transforms.CenterSpatialCrop
+  params:
+    roi_size:
+    - 0
+    - 1250
+    - 1250
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_post_val:
+- name: monai.transforms.CenterSpatialCrop
+  params:
+    roi_size:
+    - 0
+    - 1250
+    - 1250
+- name: monai.transforms.Activations
+  params:
+    softmax: true
+- name: monai.transforms.AsDiscrete
+  params:
+    argmax: true
+    to_onehot: 2
+transform_test:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+- name: monai.transforms.DivisiblePadd
+  params:
+    k:
+    - 0
+    - 32
+    - 32
+    keys:
+    - image
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+transform_train:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+- name: monai.transforms.DivisiblePadd
+  params:
+    k:
+    - 0
+    - 32
+    - 32
+    keys:
+    - image
+    - label
+    - inpainted
+- name: lib.transforms.MyNormalizeIntensityd
+  params:
+    keys:
+    - image
+    - inpainted
+    ref: image
+- name: monai.transforms.RandZoomd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+    max_zoom: 1.75
+    min_zoom: 1
+    mode:
+    - trilinear
+    - nearest-exact
+    - trilinear
+    prob: 0.5
+- name: monai.transforms.RandCropByLabelClassesd
+  params:
+    keys:
+    - image
+    - label
+    - inpainted
+    label_key: label
+    num_classes: 2
+    num_samples: 15
+    ratios:
+    - 0
+    - 1
+    spatial_size:
+    - 1
+    - -1
+    - -1
+- name: monai.transforms.SqueezeDimd
+  params:
+    dim: 1
+    keys:
+    - image
+    - label
+    - inpainted
+- name: lib.transforms.CoLeTraTransformd
+  params:
+    fill_type:
+    - -2
+    - -2
+    holes: 274
+    key_images:
+    - image
+    key_label: label
+    key_label_class: 1
+    prob: 1
+    size:
+    - 19
+    - 19
+- name: monai.transforms.RandAdjustContrastd
+  params:
+    gamma:
+    - 0.8
+    - 1.2
+    keys:
+    - image
+    prob: 0.5
+- name: monai.transforms.RandAxisFlipd
+  params:
+    keys:
+    - image
+    - label
+    prob: 0.5
+transform_val:
+- name: monai.transforms.LoadImaged
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.EnsureChannelFirstd
+  params:
+    keys:
+    - image
+    - label
+- name: monai.transforms.DivisiblePadd
+  params:
+    k:
+    - 0
+    - 32
+    - 32
+    keys:
+    - image
+- name: monai.transforms.NormalizeIntensityd
+  params:
+    keys:
+    - image
+val_inferer:
+  name: monai.inferers.SliceInferer
+  params:
+    roi_size:
+    - -1
+    - -1
+    spatial_dim: 0
+    sw_batch_size: 4
+val_interval: 500
