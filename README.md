@@ -41,7 +41,7 @@ python train.py --config config/exps/<dataset>-<architecture>-<loss>.yaml
 python train.py --config config/exps/drive-dynunet-dice.yaml
 ```
 
-* dataset: "drive", "crack500", "cremi", "narwhal"
+* dataset: "drive", "pulmonary", "narwhal", "crack500", "cremi"
 * architecture: "dynunet", "attentionunet"
 * loss: "ce", "dice", "rwloss", "cldice", "warploss", "topoloss"
 

@@ -190,6 +190,8 @@ def parseConfig(path_exps: str) -> Dict:
             time, mem = "2:00", "8GB"
         elif cfg['dataset']['name'] == 'lib.data.NarwhalNoUOMs':
             time, mem = "5:00", "20GB"
+        elif cfg['dataset']['name'] == 'lib.data.Pulmonary':
+            time, mem = "5:00", "20GB"
 
         if cfg['computer_name'] == "cluster":
             cfg['run_measure'] = f'bsub -q compute -J measure -n 1 -W {time} -R "rusage[mem={mem}]" -o tmp_res/%J.out -e tmp_res/%J.err "module load python3/3.9.11 cuda/11.7 julia/1.9.2; source /PATH/bin/activate; python -u measure.py'
